@@ -48,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn: AuthCtx["signIn"] = async (email, password) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: "Invalid email or password." };
+    if (error) return { error: "invalid_credentials" };
     return { error: null };
   };
   const signUp: AuthCtx["signUp"] = async (email, password) => {

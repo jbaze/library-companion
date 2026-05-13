@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Book } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BookCover } from "@/components/BookCover";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/books/$id")({
 });
 
 function BookDetail() {
+  const t = useT();
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const { data: book, isLoading, error } = useQuery({
@@ -29,15 +31,15 @@ function BookDetail() {
       <SiteHeader />
       <main className="mx-auto max-w-5xl px-4 py-10 md:px-6">
         <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/" })} className="mb-6">
-          <ArrowLeft className="h-4 w-4" /> Back to catalog
+          <ArrowLeft className="h-4 w-4" /> {t("book.back")}
         </Button>
         {isLoading ? (
           <div className="h-96 animate-pulse rounded-2xl bg-muted" />
         ) : !book || error ? (
           <div className="rounded-2xl border border-dashed border-border p-10 text-center">
-            <h2 className="font-display text-2xl font-semibold">Book not found</h2>
-            <p className="mt-2 text-muted-foreground">It may have been archived or removed.</p>
-            <Link to="/" className="mt-4 inline-block text-primary underline">Browse the catalog</Link>
+            <h2 className="font-display text-2xl font-semibold">{t("book.notFound.title")}</h2>
+            <p className="mt-2 text-muted-foreground">{t("book.notFound.body")}</p>
+            <Link to="/" className="mt-4 inline-block text-primary underline">{t("book.notFound.cta")}</Link>
           </div>
         ) : (
           <article className="grid gap-8 md:grid-cols-[280px_1fr]">
@@ -49,15 +51,15 @@ function BookDetail() {
             <div>
               <p className="text-xs uppercase tracking-wider text-muted-foreground">{book.category}</p>
               <h1 className="mt-2 font-display text-4xl font-semibold tracking-tight">{book.title}</h1>
-              <p className="mt-2 text-lg text-muted-foreground">by {book.author}</p>
+              <p className="mt-2 text-lg text-muted-foreground">{t("book.byAuthor", { author: book.author })}</p>
               <div className="mt-4 flex flex-wrap gap-2">
                 {book.available_copies > 0 ? (
-                  <Badge className="bg-success text-success-foreground hover:bg-success">Available</Badge>
+                  <Badge className="bg-success text-success-foreground hover:bg-success">{t("book.badge.available")}</Badge>
                 ) : (
-                  <Badge variant="secondary">All copies borrowed</Badge>
+                  <Badge variant="secondary">{t("book.badge.allBorrowed")}</Badge>
                 )}
-                <Badge variant="outline">{book.available_copies} of {book.total_copies} available</Badge>
-                <Badge variant="outline">ISBN {book.isbn}</Badge>
+                <Badge variant="outline">{t("catalog.availability", { available: book.available_copies, total: book.total_copies })}</Badge>
+                <Badge variant="outline">{t("book.isbn", { isbn: book.isbn })}</Badge>
               </div>
               {book.description && (
                 <p className="mt-6 whitespace-pre-line leading-relaxed text-foreground/90">
@@ -65,8 +67,7 @@ function BookDetail() {
                 </p>
               )}
               <div className="mt-8 rounded-lg border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
-                Borrowing happens in person at the library desk. Bring your student ID and ask
-                a librarian for this title.
+                {t("book.deskNote")}
               </div>
             </div>
           </article>

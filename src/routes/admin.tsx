@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { AdminConsole } from "@/components/AdminConsole";
 
@@ -9,6 +10,7 @@ export const Route = createFileRoute("/admin")({
 });
 
 function AdminPage() {
+  const t = useT();
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
 
@@ -33,10 +35,10 @@ function AdminPage() {
       <main className="mx-auto max-w-6xl px-4 py-10 md:px-6">
         <div className="mb-8">
           <h1 className="font-display text-3xl font-semibold tracking-tight md:text-4xl">
-            Library administration
+            {t("admin.title")}
           </h1>
           <p className="mt-1 text-muted-foreground">
-            Manage the catalog and record borrowings as they happen at the desk.
+            {t("admin.subtitle")}
           </p>
         </div>
         <AdminConsole />
