@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Search, Library, BookOpenCheck, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Book } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BookCover } from "@/components/BookCover";
 import { Input } from "@/components/ui/input";
@@ -14,16 +15,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Catalog — Athenaeum College Library" },
-      { name: "description", content: "Search the college library catalog and see live availability for every book." },
-      { property: "og:title", content: "Catalog — Athenaeum College Library" },
-      { property: "og:description", content: "Search the college library catalog and see live availability for every book." },
+      { title: "Каталог — Универзитетска библиотека Атенеум" },
+      { name: "description", content: "Пребарајте го каталогот на универзитетската библиотека и видете ја достапноста на секоја книга во живо." },
+      { property: "og:title", content: "Каталог — Универзитетска библиотека Атенеум" },
+      { property: "og:description", content: "Пребарајте го каталогот на универзитетската библиотека и видете ја достапноста на секоја книга во живо." },
     ],
   }),
   component: CatalogPage,
 });
 
 function CatalogPage() {
+  const t = useT();
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [availability, setAvailability] = useState<"all" | "available">("all");
@@ -76,14 +78,13 @@ function CatalogPage() {
         <div className="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-20">
           <div className="max-w-2xl">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-              <Library className="h-3.5 w-3.5" /> Live availability
+              <Library className="h-3.5 w-3.5" /> {t("catalog.badge")}
             </span>
             <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-foreground md:text-6xl">
-              Every book on the shelves, in real time.
+              {t("catalog.hero.title")}
             </h1>
             <p className="mt-4 text-base text-muted-foreground md:text-lg">
-              Search the catalog, check what's free to borrow today, and walk into the library
-              knowing exactly what's waiting.
+              {t("catalog.hero.body")}
             </p>
           </div>
 
@@ -93,17 +94,17 @@ function CatalogPage() {
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search by title, author, or ISBN…"
+                placeholder={t("catalog.search.placeholder")}
                 className="h-11 pl-9"
               />
             </div>
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger className="h-11 md:w-[180px]">
                 <Filter className="h-4 w-4" />
-                <SelectValue placeholder="Category" />
+                <SelectValue placeholder={t("catalog.filter.category")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
+                <SelectItem value="all">{t("catalog.filter.allCategories")}</SelectItem>
                 {categories.map((c) => (
                   <SelectItem key={c} value={c}>{c}</SelectItem>
                 ))}
@@ -112,15 +113,15 @@ function CatalogPage() {
             <Select value={availability} onValueChange={(v) => setAvailability(v as "all" | "available")}>
               <SelectTrigger className="h-11 md:w-[170px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All books</SelectItem>
-                <SelectItem value="available">Available now</SelectItem>
+                <SelectItem value="all">{t("catalog.filter.allBooks")}</SelectItem>
+                <SelectItem value="available">{t("catalog.filter.availableNow")}</SelectItem>
               </SelectContent>
             </Select>
             <Select value={sort} onValueChange={(v) => setSort(v as "title" | "newest")}>
               <SelectTrigger className="h-11 md:w-[150px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="title">A–Z by title</SelectItem>
-                <SelectItem value="newest">Newest first</SelectItem>
+                <SelectItem value="title">{t("catalog.sort.titleAZ")}</SelectItem>
+                <SelectItem value="newest">{t("catalog.sort.newest")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -139,7 +140,7 @@ function CatalogPage() {
         ) : (
           <>
             <p className="mb-4 text-sm text-muted-foreground">
-              {filtered.length} {filtered.length === 1 ? "book" : "books"} found
+              {t(filtered.length === 1 ? "catalog.results.one" : "catalog.results.other", { count: filtered.length })}
             </p>
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
               {filtered.map((b) => <CatalogCard key={b.id} book={b} />)}
@@ -152,6 +153,7 @@ function CatalogPage() {
 }
 
 function CatalogCard({ book }: { book: Book }) {
+  const t = useT();
   const free = book.available_copies > 0;
   return (
     <Link
@@ -163,9 +165,9 @@ function CatalogCard({ book }: { book: Book }) {
         <BookCover url={book.cover_url} title={book.title} className="transition-transform duration-500 group-hover:scale-105" />
         <div className="absolute left-2 top-2">
           {free ? (
-            <Badge className="bg-success text-success-foreground hover:bg-success">Available</Badge>
+            <Badge className="bg-success text-success-foreground hover:bg-success">{t("catalog.badge.available")}</Badge>
           ) : (
-            <Badge variant="secondary" className="bg-foreground/85 text-background">All borrowed</Badge>
+            <Badge variant="secondary" className="bg-foreground/85 text-background">{t("catalog.badge.allBorrowed")}</Badge>
           )}
         </div>
       </div>
@@ -174,7 +176,7 @@ function CatalogCard({ book }: { book: Book }) {
         <h3 className="line-clamp-2 font-display text-base font-semibold leading-tight">{book.title}</h3>
         <p className="text-sm text-muted-foreground">{book.author}</p>
         <p className="mt-auto pt-2 text-xs text-muted-foreground">
-          {book.available_copies} of {book.total_copies} available
+          {t("catalog.availability", { available: book.available_copies, total: book.total_copies })}
         </p>
       </div>
     </Link>
@@ -182,21 +184,22 @@ function CatalogCard({ book }: { book: Book }) {
 }
 
 function EmptyState({ hasBooks, onClear }: { hasBooks: boolean; onClear: () => void }) {
+  const t = useT();
   return (
     <div className="mx-auto max-w-md rounded-2xl border border-dashed border-border bg-card/50 p-10 text-center">
       <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-secondary text-secondary-foreground">
         <BookOpenCheck className="h-6 w-6" />
       </div>
       <h3 className="mt-4 font-display text-lg font-semibold">
-        {hasBooks ? "No books match your search" : "The catalog is empty"}
+        {hasBooks ? t("catalog.empty.noMatch.title") : t("catalog.empty.noBooks.title")}
       </h3>
       <p className="mt-2 text-sm text-muted-foreground">
         {hasBooks
-          ? "Try a different keyword or clear the filters."
-          : "An administrator hasn't added any books yet. Check back soon."}
+          ? t("catalog.empty.noMatch.body")
+          : t("catalog.empty.noBooks.body")}
       </p>
       {hasBooks && (
-        <Button variant="outline" className="mt-4" onClick={onClear}>Clear filters</Button>
+        <Button variant="outline" className="mt-4" onClick={onClear}>{t("catalog.empty.clear")}</Button>
       )}
     </div>
   );

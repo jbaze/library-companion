@@ -1,10 +1,13 @@
 import { Link } from "@tanstack/react-router";
-import { BookOpenText, LogIn, LogOut, ShieldCheck } from "lucide-react";
+import { BookOpenText, Globe, LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useI18n, type Lang } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function SiteHeader() {
   const { user, isAdmin, signOut } = useAuth();
+  const { lang, setLang, t } = useI18n();
   return (
     <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6">
@@ -13,31 +16,41 @@ export function SiteHeader() {
             <BookOpenText className="h-5 w-5" />
           </span>
           <span className="font-display text-xl font-semibold tracking-tight">
-            Athenaeum
+            {t("site.brand")}
           </span>
-          <span className="hidden text-xs text-muted-foreground md:inline">/ College Library</span>
+          <span className="hidden text-xs text-muted-foreground md:inline">{t("site.tagline")}</span>
         </Link>
         <nav className="flex items-center gap-2">
           <Link to="/" className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground">
-            Catalog
+            {t("nav.catalog")}
           </Link>
+          <Select value={lang} onValueChange={(v) => setLang(v as Lang)}>
+            <SelectTrigger aria-label={t("lang.label")} className="h-8 w-auto gap-1.5 px-2">
+              <Globe className="h-4 w-4" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="mk">{t("lang.mk")}</SelectItem>
+              <SelectItem value="en">{t("lang.en")}</SelectItem>
+            </SelectContent>
+          </Select>
           {isAdmin ? (
             <>
               <Link to="/admin" className="rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted inline-flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4" /> Admin
+                <ShieldCheck className="h-4 w-4" /> {t("nav.admin")}
               </Link>
               <Button variant="ghost" size="sm" onClick={() => signOut()}>
-                <LogOut className="h-4 w-4" /> Sign out
+                <LogOut className="h-4 w-4" /> {t("nav.signOut")}
               </Button>
             </>
           ) : user ? (
             <Button variant="ghost" size="sm" onClick={() => signOut()}>
-              <LogOut className="h-4 w-4" /> Sign out
+              <LogOut className="h-4 w-4" /> {t("nav.signOut")}
             </Button>
           ) : (
             <Link to="/login">
               <Button variant="outline" size="sm">
-                <LogIn className="h-4 w-4" /> Staff sign in
+                <LogIn className="h-4 w-4" /> {t("nav.staffSignIn")}
               </Button>
             </Link>
           )}

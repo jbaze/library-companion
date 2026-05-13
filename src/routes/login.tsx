@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useT } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
+  const t = useT();
   const { signIn, signUp, user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -31,8 +33,8 @@ function LoginPage() {
     const fn = mode === "signin" ? signIn : signUp;
     const { error } = await fn(email, password);
     setBusy(false);
-    if (error) toast.error(error);
-    else if (mode === "signup") toast.success("Account created. You're signed in.");
+    if (error) toast.error(error === "invalid_credentials" ? t("login.error.invalid") : error);
+    else if (mode === "signup") toast.success(t("login.toast.created"));
   }
 
   return (
@@ -45,35 +47,35 @@ function LoginPage() {
               <ShieldCheck className="h-5 w-5" />
             </span>
             <div>
-              <h1 className="font-display text-2xl font-semibold">Library staff</h1>
-              <p className="text-sm text-muted-foreground">Administrator access only.</p>
+              <h1 className="font-display text-2xl font-semibold">{t("login.title")}</h1>
+              <p className="text-sm text-muted-foreground">{t("login.subtitle")}</p>
             </div>
           </div>
 
           <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
             <TabsList className="grid grid-cols-2">
-              <TabsTrigger value="signin">Sign in</TabsTrigger>
-              <TabsTrigger value="signup">Create account</TabsTrigger>
+              <TabsTrigger value="signin">{t("login.tab.signIn")}</TabsTrigger>
+              <TabsTrigger value="signup">{t("login.tab.signUp")}</TabsTrigger>
             </TabsList>
             <TabsContent value="signin" className="mt-2 text-xs text-muted-foreground">
-              Use your administrator credentials.
+              {t("login.hint.signIn")}
             </TabsContent>
             <TabsContent value="signup" className="mt-2 text-xs text-muted-foreground">
-              The first account created becomes the administrator.
+              {t("login.hint.signUp")}
             </TabsContent>
           </Tabs>
 
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("login.email")}</Label>
               <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("login.password")}</Label>
               <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "signin" ? "current-password" : "new-password"} />
             </div>
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}
+              {busy ? t("login.wait") : mode === "signin" ? t("login.submit.signIn") : t("login.submit.signUp")}
             </Button>
           </form>
         </div>

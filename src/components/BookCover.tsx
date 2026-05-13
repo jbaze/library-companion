@@ -1,4 +1,5 @@
 import { BookOpen } from "lucide-react";
+import { useT } from "@/lib/i18n";
 
 export function BookCover({
   url,
@@ -9,11 +10,12 @@ export function BookCover({
   title: string;
   className?: string;
 }) {
+  const t = useT();
   if (url) {
     return (
       <img
         src={url}
-        alt={`Cover of ${title}`}
+        alt={t("book.coverAlt", { title })}
         loading="lazy"
         className={`h-full w-full object-cover ${className}`}
       />

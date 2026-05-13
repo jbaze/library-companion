@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Pencil, Archive, ArchiveRestore, Trash2, BookMinus, BookPlus, Library, ImageOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Book } from "@/lib/types";
+import { useT } from "@/lib/i18n";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,7 +33,19 @@ type FormState = {
 
 const empty: FormState = { title: "", author: "", isbn: "", category: "", total_copies: 1, description: "", cover_url: "" };
 
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
+function humanError(msg: string, t: TFn): string {
+  if (msg.includes("duplicate key") && msg.includes("isbn")) return t("error.duplicateIsbn");
+  if (msg.includes("Cannot borrow")) return t("error.cannotBorrow");
+  if (msg.includes("Cannot return")) return t("error.cannotReturn");
+  if (msg.includes("available_le_total") || msg.includes("available_copies_check")) return t("error.tooManyBorrowed");
+  if (msg.includes("Not authorized")) return t("error.notAuthorized");
+  return msg;
+}
+
 export function AdminConsole() {
+  const t = useT();
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "archived">("all");
@@ -60,35 +73,35 @@ export function AdminConsole() {
       const { error } = await supabase.rpc("borrow_book", { _book_id: id });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Borrow recorded"); refresh(); },
-    onError: (e: Error) => toast.error(humanError(e.message)),
+    onSuccess: () => { toast.success(t("admin.toast.borrow")); refresh(); },
+    onError: (e: Error) => toast.error(humanError(e.message, t)),
   });
   const ret = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.rpc("return_book", { _book_id: id });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Return recorded"); refresh(); },
-    onError: (e: Error) => toast.error(humanError(e.message)),
+    onSuccess: () => { toast.success(t("admin.toast.return")); refresh(); },
+    onError: (e: Error) => toast.error(humanError(e.message, t)),
   });
   const archive = useMutation({
     mutationFn: async ({ id, archived }: { id: string; archived: boolean }) => {
       const { error } = await supabase.from("books").update({ archived }).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: (_d, v) => { toast.success(v.archived ? "Archived" : "Unarchived"); refresh(); },
-    onError: (e: Error) => toast.error(humanError(e.message)),
+    onSuccess: (_d, v) => { toast.success(v.archived ? t("admin.toast.archived") : t("admin.toast.unarchived")); refresh(); },
+    onError: (e: Error) => toast.error(humanError(e.message, t)),
   });
   const remove = useMutation({
     mutationFn: async (b: Book) => {
       if (b.available_copies < b.total_copies) {
-        throw new Error("Cannot delete: some copies are still on loan. Archive the book instead.");
+        throw new Error(t("error.cannotDelete"));
       }
       const { error } = await supabase.from("books").delete().eq("id", b.id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Book deleted"); refresh(); setConfirmDelete(null); },
-    onError: (e: Error) => toast.error(humanError(e.message)),
+    onSuccess: () => { toast.success(t("admin.toast.deleted")); refresh(); setConfirmDelete(null); },
+    onError: (e: Error) => toast.error(humanError(e.message, t)),
   });
 
   const filtered = (books ?? [])
@@ -115,40 +128,40 @@ export function AdminConsole() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="Books in catalog" value={stats.total} />
-        <StatCard label="Active titles" value={stats.active} />
-        <StatCard label="Copies on loan" value={stats.onLoan} />
+        <StatCard label={t("admin.stat.total")} value={stats.total} />
+        <StatCard label={t("admin.stat.active")} value={stats.active} />
+        <StatCard label={t("admin.stat.onLoan")} value={stats.onLoan} />
       </div>
 
       <Card className="p-4">
         <div className="grid gap-3 md:grid-cols-[1fr_auto_auto_auto]">
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title, author, ISBN…" className="pl-9" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("admin.search.placeholder")} className="pl-9" />
           </div>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
             <SelectTrigger className="md:w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All books</SelectItem>
-              <SelectItem value="active">Active only</SelectItem>
-              <SelectItem value="archived">Archived only</SelectItem>
+              <SelectItem value="all">{t("admin.filter.all")}</SelectItem>
+              <SelectItem value="active">{t("admin.filter.active")}</SelectItem>
+              <SelectItem value="archived">{t("admin.filter.archived")}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
             <SelectTrigger className="md:w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="title">Sort: Title</SelectItem>
-              <SelectItem value="author">Sort: Author</SelectItem>
-              <SelectItem value="available">Sort: Most available</SelectItem>
+              <SelectItem value="title">{t("admin.sort.title")}</SelectItem>
+              <SelectItem value="author">{t("admin.sort.author")}</SelectItem>
+              <SelectItem value="available">{t("admin.sort.available")}</SelectItem>
             </SelectContent>
           </Select>
           <Dialog open={adding} onOpenChange={setAdding}>
             <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4" /> Add book</Button>
+              <Button><Plus className="h-4 w-4" /> {t("admin.addBook")}</Button>
             </DialogTrigger>
             <BookFormDialog
               key={adding ? "add" : "closed"}
-              title="Add a new book"
+              title={t("form.add.title")}
               initial={empty}
               onClose={() => setAdding(false)}
               onSaved={() => { setAdding(false); refresh(); }}
@@ -162,7 +175,7 @@ export function AdminConsole() {
       ) : filtered.length === 0 ? (
         <Card className="p-12 text-center text-muted-foreground">
           <Library className="mx-auto mb-3 h-8 w-8 opacity-50" />
-          No books match the current view.
+          {t("admin.empty")}
         </Card>
       ) : (
         <Card className="overflow-hidden">
@@ -176,7 +189,7 @@ export function AdminConsole() {
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-display text-base font-semibold leading-tight truncate">{b.title}</h3>
-                      {b.archived && <Badge variant="outline" className="border-warning text-warning">Archived</Badge>}
+                      {b.archived && <Badge variant="outline" className="border-warning text-warning">{t("admin.badge.archived")}</Badge>}
                       <Badge variant={b.available_copies > 0 ? "default" : "secondary"} className={b.available_copies > 0 ? "bg-success text-success-foreground hover:bg-success" : ""}>
                         {b.available_copies}/{b.total_copies}
                       </Badge>
@@ -184,16 +197,16 @@ export function AdminConsole() {
                     <p className="truncate text-sm text-muted-foreground">{b.author} · {b.category} · ISBN {b.isbn}</p>
                     {b.last_activity_at && (
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        {b.borrow_count} borrows · {b.return_count} returns · last {new Date(b.last_activity_at).toLocaleString()}
+                        {t("admin.activity", { borrows: b.borrow_count, returns: b.return_count, when: new Date(b.last_activity_at).toLocaleString() })}
                       </p>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-1.5">
                     <Button size="sm" variant="outline" disabled={b.archived || b.available_copies === 0 || borrow.isPending} onClick={() => borrow.mutate(b.id)}>
-                      <BookMinus className="h-4 w-4" /> Borrow
+                      <BookMinus className="h-4 w-4" /> {t("admin.action.borrow")}
                     </Button>
                     <Button size="sm" variant="outline" disabled={b.available_copies >= b.total_copies || ret.isPending} onClick={() => ret.mutate(b.id)}>
-                      <BookPlus className="h-4 w-4" /> Return
+                      <BookPlus className="h-4 w-4" /> {t("admin.action.return")}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setEditing(b)}>
                       <Pencil className="h-4 w-4" />
@@ -216,7 +229,7 @@ export function AdminConsole() {
         {editing && (
           <BookFormDialog
             key={editing.id}
-            title="Edit book"
+            title={t("form.edit.title")}
             initial={{
               title: editing.title, author: editing.author, isbn: editing.isbn,
               category: editing.category, total_copies: editing.total_copies,
@@ -232,18 +245,18 @@ export function AdminConsole() {
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this book?</AlertDialogTitle>
+            <AlertDialogTitle>{t("admin.delete.title")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes "{confirmDelete?.title}" from the catalog. This cannot be undone.
+              {t("admin.delete.body", { title: confirmDelete?.title ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("admin.delete.cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={(e) => { e.preventDefault(); if (confirmDelete) remove.mutate(confirmDelete); }}
             >
-              Delete permanently
+              {t("admin.delete.confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -261,15 +274,6 @@ function StatCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function humanError(msg: string): string {
-  if (msg.includes("duplicate key") && msg.includes("isbn")) return "A book with that ISBN already exists. Edit the existing book instead.";
-  if (msg.includes("Cannot borrow")) return "Cannot borrow: no copies available or the book is archived.";
-  if (msg.includes("Cannot return")) return "Cannot return: all copies are already in the library.";
-  if (msg.includes("available_le_total") || msg.includes("available_copies_check")) return "Too many copies are currently borrowed to reduce the total. Wait for returns first.";
-  if (msg.includes("Not authorized")) return "You don't have permission to do that.";
-  return msg;
-}
-
 function BookFormDialog({
   title, initial, editing, onClose, onSaved,
 }: {
@@ -279,6 +283,7 @@ function BookFormDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useT();
   const [form, setForm] = useState<FormState>(initial);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -295,7 +300,7 @@ function BookFormDialog({
       const { data } = supabase.storage.from("book-covers").getPublicUrl(path);
       set("cover_url", data.publicUrl);
     } catch (e) {
-      toast.error(`Upload failed: ${(e as Error).message}`);
+      toast.error(t("error.uploadFailed", { message: (e as Error).message }));
     } finally {
       setUploading(false);
     }
@@ -303,11 +308,11 @@ function BookFormDialog({
 
   async function handleSave() {
     if (!form.title.trim() || !form.author.trim() || !form.isbn.trim() || !form.category.trim()) {
-      toast.error("Title, author, ISBN, and category are required.");
+      toast.error(t("error.required"));
       return;
     }
     if (form.total_copies < 0 || !Number.isInteger(form.total_copies)) {
-      toast.error("Total copies must be a non-negative whole number.");
+      toast.error(t("error.totalNonNegative"));
       return;
     }
     setSaving(true);
@@ -316,7 +321,7 @@ function BookFormDialog({
         const delta = form.total_copies - editing.total_copies;
         const newAvailable = editing.available_copies + delta;
         if (newAvailable < 0) {
-          toast.error("Too many copies are currently borrowed to reduce the total. Wait for returns first.");
+          toast.error(t("error.tooManyBorrowed"));
           setSaving(false);
           return;
         }
@@ -331,7 +336,7 @@ function BookFormDialog({
           available_copies: newAvailable,
         }).eq("id", editing.id);
         if (error) throw error;
-        toast.success("Book updated");
+        toast.success(t("admin.toast.updated"));
       } else {
         const { error } = await supabase.from("books").insert({
           title: form.title.trim(),
@@ -344,11 +349,11 @@ function BookFormDialog({
           available_copies: form.total_copies,
         });
         if (error) throw error;
-        toast.success("Book added to catalog");
+        toast.success(t("admin.toast.added"));
       }
       onSaved();
     } catch (e) {
-      toast.error(humanError((e as Error).message));
+      toast.error(humanError((e as Error).message, t));
     } finally {
       setSaving(false);
     }
@@ -359,42 +364,42 @@ function BookFormDialog({
       <DialogHeader>
         <DialogTitle className="font-display">{title}</DialogTitle>
         <DialogDescription>
-          {editing ? "Update the details for this book." : "Add a new book to the library catalog."}
+          {editing ? t("form.edit.description") : t("form.add.description")}
         </DialogDescription>
       </DialogHeader>
       <div className="grid gap-4 py-2 md:grid-cols-2">
         <div className="space-y-1.5 md:col-span-2">
-          <Label htmlFor="t">Title</Label>
+          <Label htmlFor="t">{t("form.field.title")}</Label>
           <Input id="t" value={form.title} onChange={(e) => set("title", e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="a">Author</Label>
+          <Label htmlFor="a">{t("form.field.author")}</Label>
           <Input id="a" value={form.author} onChange={(e) => set("author", e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="i">ISBN / identifier</Label>
+          <Label htmlFor="i">{t("form.field.isbn")}</Label>
           <Input id="i" value={form.isbn} onChange={(e) => set("isbn", e.target.value)} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="c">Category</Label>
-          <Input id="c" value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="e.g. Computer Science" />
+          <Label htmlFor="c">{t("form.field.category")}</Label>
+          <Input id="c" value={form.category} onChange={(e) => set("category", e.target.value)} placeholder={t("form.field.categoryPlaceholder")} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="n">Total copies</Label>
+          <Label htmlFor="n">{t("form.field.totalCopies")}</Label>
           <Input id="n" type="number" min={0} value={form.total_copies}
             onChange={(e) => set("total_copies", parseInt(e.target.value || "0", 10))} />
           {editing && (
             <p className="text-xs text-muted-foreground">
-              Currently {editing.available_copies}/{editing.total_copies} available. Changing total adjusts available by the same amount.
+              {t("form.field.totalCopies.hint", { available: editing.available_copies, total: editing.total_copies })}
             </p>
           )}
         </div>
         <div className="space-y-1.5 md:col-span-2">
-          <Label htmlFor="d">Description (optional)</Label>
+          <Label htmlFor="d">{t("form.field.description")}</Label>
           <Textarea id="d" rows={3} value={form.description} onChange={(e) => set("description", e.target.value)} />
         </div>
         <div className="space-y-1.5 md:col-span-2">
-          <Label>Cover image (optional)</Label>
+          <Label>{t("form.field.cover")}</Label>
           <div className="flex items-start gap-3">
             <div className="h-24 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
               {form.cover_url ? (
@@ -412,7 +417,7 @@ function BookFormDialog({
               />
               {form.cover_url && (
                 <Button type="button" size="sm" variant="ghost" onClick={() => set("cover_url", "")}>
-                  Remove cover
+                  {t("form.cover.remove")}
                 </Button>
               )}
             </div>
@@ -420,9 +425,9 @@ function BookFormDialog({
         </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button variant="outline" onClick={onClose} disabled={saving}>{t("form.cancel")}</Button>
         <Button onClick={handleSave} disabled={saving || uploading}>
-          {saving ? "Saving…" : editing ? "Save changes" : "Add to catalog"}
+          {saving ? t("form.saving") : editing ? t("form.save") : t("form.addToCatalog")}
         </Button>
       </DialogFooter>
     </DialogContent>
