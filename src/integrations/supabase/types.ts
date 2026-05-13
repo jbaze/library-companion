@@ -14,16 +14,148 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      books: {
+        Row: {
+          archived: boolean
+          author: string
+          available_copies: number
+          borrow_count: number
+          category: string
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          isbn: string
+          last_activity_at: string | null
+          return_count: number
+          title: string
+          total_copies: number
+          updated_at: string
+        }
+        Insert: {
+          archived?: boolean
+          author: string
+          available_copies?: number
+          borrow_count?: number
+          category: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          isbn: string
+          last_activity_at?: string | null
+          return_count?: number
+          title: string
+          total_copies?: number
+          updated_at?: string
+        }
+        Update: {
+          archived?: boolean
+          author?: string
+          available_copies?: number
+          borrow_count?: number
+          category?: string
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          isbn?: string
+          last_activity_at?: string | null
+          return_count?: number
+          title?: string
+          total_copies?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      borrow_book: {
+        Args: { _book_id: string }
+        Returns: {
+          archived: boolean
+          author: string
+          available_copies: number
+          borrow_count: number
+          category: string
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          isbn: string
+          last_activity_at: string | null
+          return_count: number
+          title: string
+          total_copies: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "books"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      return_book: {
+        Args: { _book_id: string }
+        Returns: {
+          archived: boolean
+          author: string
+          available_copies: number
+          borrow_count: number
+          category: string
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          isbn: string
+          last_activity_at: string | null
+          return_count: number
+          title: string
+          total_copies: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "books"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +282,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin"],
+    },
   },
 } as const
