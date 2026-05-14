@@ -55,6 +55,7 @@ export function AdminConsole() {
   const [editing, setEditing] = useState<Book | null>(null);
   const [adding, setAdding] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Book | null>(null);
+  const [deleteAck, setDeleteAck] = useState(false);
 
   const { data: books, isLoading } = useQuery({
     queryKey: ["admin-books"],
