@@ -246,7 +246,10 @@ export function AdminConsole() {
         )}
       </Dialog>
 
-      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+      <AlertDialog
+        open={!!confirmDelete}
+        onOpenChange={(o) => { if (!o) { setConfirmDelete(null); setDeleteAck(false); } }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("admin.delete.title")}</AlertDialogTitle>
@@ -254,11 +257,51 @@ export function AdminConsole() {
               {t("admin.delete.body", { title: confirmDelete?.title ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {confirmDelete && (
+            <div className="space-y-3">
+              <Card className="bg-muted/40 p-3">
+                <p className="font-display text-base font-semibold leading-tight">{confirmDelete.title}</p>
+                <p className="text-sm text-muted-foreground">{confirmDelete.author} · ISBN {confirmDelete.isbn}</p>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                  <Badge variant="secondary">
+                    {t("admin.delete.stat.copies", {
+                      available: confirmDelete.available_copies,
+                      total: confirmDelete.total_copies,
+                    })}
+                  </Badge>
+                  <Badge variant="secondary">
+                    {t("admin.delete.stat.activity", {
+                      borrows: confirmDelete.borrow_count,
+                      returns: confirmDelete.return_count,
+                    })}
+                  </Badge>
+                </div>
+              </Card>
+              {confirmDelete.available_copies < confirmDelete.total_copies && (
+                <p className="text-sm text-destructive">{t("error.cannotDelete")}</p>
+              )}
+              <label className="flex items-start gap-2 text-sm">
+                <Checkbox
+                  checked={deleteAck}
+                  onCheckedChange={(v) => setDeleteAck(v === true)}
+                  className="mt-0.5"
+                />
+                <span>{t("admin.delete.ack")}</span>
+              </label>
+            </div>
+          )}
           <AlertDialogFooter>
-            <AlertDialogCancel>{t("admin.delete.cancel")}</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setDeleteAck(false)}>{t("admin.delete.cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={(e) => { e.preventDefault(); if (confirmDelete) remove.mutate(confirmDelete); }}
+              disabled={!deleteAck || remove.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+              onClick={(e) => {
+                e.preventDefault();
+                if (confirmDelete && deleteAck) {
+                  remove.mutate(confirmDelete);
+                  setDeleteAck(false);
+                }
+              }}
             >
               {t("admin.delete.confirm")}
             </AlertDialogAction>
