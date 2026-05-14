@@ -158,6 +158,7 @@ export function AdminConsole() {
               <SelectItem value="available">{t("admin.sort.available")}</SelectItem>
             </SelectContent>
           </Select>
+          <BulkImportDialog />
           <Dialog open={adding} onOpenChange={setAdding}>
             <DialogTrigger asChild>
               <Button><Plus className="h-4 w-4" /> {t("admin.addBook")}</Button>
