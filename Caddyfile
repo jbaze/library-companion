@@ -1,0 +1,14 @@
+{$DOMAIN} {
+    encode gzip zstd
+
+    # API routes proxied to Supabase Kong gateway
+    @api path /auth/* /rest/* /storage/* /realtime/*
+    handle @api {
+        reverse_proxy supabase-kong:8000
+    }
+
+    # Everything else: SPA
+    handle {
+        reverse_proxy web:80
+    }
+}

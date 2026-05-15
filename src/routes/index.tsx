@@ -13,14 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Каталог — Универзитетска библиотека Атенеум" },
-      { name: "description", content: "Пребарајте го каталогот на универзитетската библиотека и видете ја достапноста на секоја книга во живо." },
-      { property: "og:title", content: "Каталог — Универзитетска библиотека Атенеум" },
-      { property: "og:description", content: "Пребарајте го каталогот на универзитетската библиотека и видете ја достапноста на секоја книга во живо." },
-    ],
-  }),
   component: CatalogPage,
 });
 
