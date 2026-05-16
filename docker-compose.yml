@@ -1,0 +1,36 @@
+name: library
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - library_net
+    depends_on:
+      - web
+    environment:
+      - DOMAIN=${DOMAIN}
+
+  web:
+    build: ./web
+    restart: unless-stopped
+    volumes:
+      - ./dist:/usr/share/nginx/html:ro
+    networks:
+      - library_net
+
+networks:
+  library_net:
+    name: library_net
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
