@@ -1,16 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, Library, BookOpenCheck, Filter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Book } from "@/lib/types";
 import { useT } from "@/lib/i18n";
 import { SiteHeader } from "@/components/SiteHeader";
 import { BookCover } from "@/components/BookCover";
+import { BooksPagination } from "@/components/BooksPagination";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const CATALOG_PAGE_SIZES = [12, 24, 48];
 
 export const Route = createFileRoute("/")({
   component: CatalogPage,
@@ -22,6 +25,8 @@ function CatalogPage() {
   const [category, setCategory] = useState<string>("all");
   const [availability, setAvailability] = useState<"all" | "available">("all");
   const [sort, setSort] = useState<"title" | "newest">("title");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(CATALOG_PAGE_SIZES[0]);
 
   const { data: books, isLoading } = useQuery({
     queryKey: ["public-books"],
@@ -62,6 +67,17 @@ function CatalogPage() {
     );
     return list;
   }, [books, q, category, availability, sort]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [q, category, availability, sort, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = useMemo(
+    () => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filtered, currentPage, pageSize],
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -135,8 +151,16 @@ function CatalogPage() {
               {t(filtered.length === 1 ? "catalog.results.one" : "catalog.results.other", { count: filtered.length })}
             </p>
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-              {filtered.map((b) => <CatalogCard key={b.id} book={b} />)}
+              {paged.map((b) => <CatalogCard key={b.id} book={b} />)}
             </div>
+            <BooksPagination
+              page={currentPage}
+              pageSize={pageSize}
+              total={filtered.length}
+              pageSizeOptions={CATALOG_PAGE_SIZES}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </>
         )}
       </main>

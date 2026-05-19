@@ -64,7 +64,7 @@ Paste the two output lines into `supabase-stack/.env`.
 
 Local dev:
 ```
-SITE_URL=http://localhost:5173
+SITE_URL=http://localhost:5193
 API_EXTERNAL_URL=http://localhost:8000
 SUPABASE_PUBLIC_URL=http://localhost:8000
 ```

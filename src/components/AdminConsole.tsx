@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Pencil, Archive, ArchiveRestore, Trash2, BookMinus, BookPlus, Library, ImageOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,8 +20,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { BookCover } from "@/components/BookCover";
 import { BulkImportDialog } from "@/components/BulkImportDialog";
+import { BooksPagination } from "@/components/BooksPagination";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+
+const ADMIN_PAGE_SIZES = [10, 20, 50];
 
 type FormState = {
   title: string;
@@ -56,6 +59,10 @@ export function AdminConsole() {
   const [adding, setAdding] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Book | null>(null);
   const [deleteAck, setDeleteAck] = useState(false);
+  const [borrowFor, setBorrowFor] = useState<Book | null>(null);
+  const [returnFor, setReturnFor] = useState<Book | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(ADMIN_PAGE_SIZES[0]);
 
   const { data: books, isLoading } = useQuery({
     queryKey: ["admin-books"],
@@ -76,7 +83,7 @@ export function AdminConsole() {
       const { error } = await supabase.rpc("borrow_book", { _book_id: id });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success(t("admin.toast.borrow")); refresh(); },
+    onSuccess: () => { toast.success(t("admin.toast.borrow")); refresh(); setBorrowFor(null); },
     onError: (e: Error) => toast.error(humanError(e.message, t)),
   });
   const ret = useMutation({
@@ -84,7 +91,7 @@ export function AdminConsole() {
       const { error } = await supabase.rpc("return_book", { _book_id: id });
       if (error) throw error;
     },
-    onSuccess: () => { toast.success(t("admin.toast.return")); refresh(); },
+    onSuccess: () => { toast.success(t("admin.toast.return")); refresh(); setReturnFor(null); },
     onError: (e: Error) => toast.error(humanError(e.message, t)),
   });
   const archive = useMutation({
@@ -107,20 +114,35 @@ export function AdminConsole() {
     onError: (e: Error) => toast.error(humanError(e.message, t)),
   });
 
-  const filtered = (books ?? [])
-    .filter((b) => {
-      if (statusFilter === "active" && b.archived) return false;
-      if (statusFilter === "archived" && !b.archived) return false;
-      if (q.trim()) {
-        const s = q.toLowerCase();
-        return b.title.toLowerCase().includes(s) || b.author.toLowerCase().includes(s) || b.isbn.toLowerCase().includes(s);
-      }
-      return true;
-    })
-    .sort((a, b) =>
-      sort === "title" ? a.title.localeCompare(b.title)
-      : sort === "author" ? a.author.localeCompare(b.author)
-      : b.available_copies - a.available_copies);
+  const filtered = useMemo(
+    () =>
+      (books ?? [])
+        .filter((b) => {
+          if (statusFilter === "active" && b.archived) return false;
+          if (statusFilter === "archived" && !b.archived) return false;
+          if (q.trim()) {
+            const s = q.toLowerCase();
+            return b.title.toLowerCase().includes(s) || b.author.toLowerCase().includes(s) || b.isbn.toLowerCase().includes(s);
+          }
+          return true;
+        })
+        .sort((a, b) =>
+          sort === "title" ? a.title.localeCompare(b.title)
+          : sort === "author" ? a.author.localeCompare(b.author)
+          : b.available_copies - a.available_copies),
+    [books, q, statusFilter, sort],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [q, statusFilter, sort, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = useMemo(
+    () => filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize),
+    [filtered, currentPage, pageSize],
+  );
 
   const stats = {
     total: books?.length ?? 0,
@@ -184,7 +206,7 @@ export function AdminConsole() {
       ) : (
         <Card className="overflow-hidden">
           <ul className="divide-y divide-border">
-            {filtered.map((b) => (
+            {paged.map((b) => (
               <li key={b.id} className={b.archived ? "bg-muted/40" : ""}>
                 <div className="flex items-center gap-4 p-4">
                   <div className="hidden h-16 w-12 shrink-0 overflow-hidden rounded-md border border-border bg-muted sm:block">
@@ -206,10 +228,10 @@ export function AdminConsole() {
                     )}
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-1.5">
-                    <Button size="sm" variant="outline" disabled={b.archived || b.available_copies === 0 || borrow.isPending} onClick={() => borrow.mutate(b.id)}>
+                    <Button size="sm" variant="outline" disabled={b.archived || b.available_copies === 0 || borrow.isPending} onClick={() => setBorrowFor(b)}>
                       <BookMinus className="h-4 w-4" /> {t("admin.action.borrow")}
                     </Button>
-                    <Button size="sm" variant="outline" disabled={b.available_copies >= b.total_copies || ret.isPending} onClick={() => ret.mutate(b.id)}>
+                    <Button size="sm" variant="outline" disabled={b.available_copies >= b.total_copies || ret.isPending} onClick={() => setReturnFor(b)}>
                       <BookPlus className="h-4 w-4" /> {t("admin.action.return")}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setEditing(b)}>
@@ -228,6 +250,32 @@ export function AdminConsole() {
           </ul>
         </Card>
       )}
+
+      {!isLoading && filtered.length > 0 && (
+        <BooksPagination
+          page={currentPage}
+          pageSize={pageSize}
+          total={filtered.length}
+          pageSizeOptions={ADMIN_PAGE_SIZES}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
+
+      <BorrowReturnDialog
+        book={borrowFor}
+        mode="borrow"
+        pending={borrow.isPending}
+        onCancel={() => setBorrowFor(null)}
+        onConfirm={() => borrowFor && borrow.mutate(borrowFor.id)}
+      />
+      <BorrowReturnDialog
+        book={returnFor}
+        mode="return"
+        pending={ret.isPending}
+        onCancel={() => setReturnFor(null)}
+        onConfirm={() => returnFor && ret.mutate(returnFor.id)}
+      />
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         {editing && (
@@ -318,6 +366,98 @@ function StatCard({ label, value }: { label: string; value: number }) {
       <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className="mt-1 font-display text-3xl font-semibold">{value}</p>
     </Card>
+  );
+}
+
+function BorrowReturnDialog({
+  book,
+  mode,
+  pending,
+  onCancel,
+  onConfirm,
+}: {
+  book: Book | null;
+  mode: "borrow" | "return";
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const t = useT();
+  const [studentNumber, setStudentNumber] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  useEffect(() => {
+    if (!book) {
+      setStudentNumber("");
+      setFirstName("");
+      setLastName("");
+    }
+  }, [book]);
+
+  return (
+    <Dialog open={!!book} onOpenChange={(o) => { if (!o) onCancel(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="font-display">
+            {t(mode === "borrow" ? "admin.loan.borrow.title" : "admin.loan.return.title")}
+          </DialogTitle>
+          <DialogDescription>
+            {t(mode === "borrow" ? "admin.loan.borrow.body" : "admin.loan.return.body", {
+              title: book?.title ?? "",
+            })}
+          </DialogDescription>
+        </DialogHeader>
+        {book && (
+          <div className="space-y-4">
+            <Card className="bg-muted/40 p-3">
+              <p className="font-display text-base font-semibold leading-tight">{book.title}</p>
+              <p className="text-sm text-muted-foreground">
+                {book.author} · ISBN {book.isbn}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                <Badge variant="secondary">
+                  {t("admin.delete.stat.copies", {
+                    available: book.available_copies,
+                    total: book.total_copies,
+                  })}
+                </Badge>
+              </div>
+            </Card>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="lsn">{t("admin.loan.studentNumber")}</Label>
+                <Input
+                  id="lsn"
+                  value={studentNumber}
+                  onChange={(e) => setStudentNumber(e.target.value)}
+                  placeholder={t("admin.loan.studentNumber.placeholder")}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="lfn">{t("admin.loan.firstName")}</Label>
+                <Input id="lfn" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="lln">{t("admin.loan.lastName")}</Label>
+                <Input id="lln" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("admin.loan.optionalHint")}</p>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel} disabled={pending}>
+            {t("admin.delete.cancel")}
+          </Button>
+          <Button onClick={onConfirm} disabled={pending}>
+            {pending
+              ? t("form.saving")
+              : t(mode === "borrow" ? "admin.loan.borrow.confirm" : "admin.loan.return.confirm")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
