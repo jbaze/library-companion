@@ -7,7 +7,6 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
@@ -16,9 +15,8 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const t = useT();
-  const { signIn, signUp, user, isAdmin, loading } = useAuth();
+  const { signIn, user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -30,11 +28,9 @@ function LoginPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
-    const fn = mode === "signin" ? signIn : signUp;
-    const { error } = await fn(email, password);
+    const { error } = await signIn(email, password);
     setBusy(false);
     if (error) toast.error(error === "invalid_credentials" ? t("login.error.invalid") : error);
-    else if (mode === "signup") toast.success(t("login.toast.created"));
   }
 
   return (
@@ -52,18 +48,7 @@ function LoginPage() {
             </div>
           </div>
 
-          <Tabs value={mode} onValueChange={(v) => setMode(v as "signin" | "signup")}>
-            <TabsList className="grid grid-cols-2">
-              <TabsTrigger value="signin">{t("login.tab.signIn")}</TabsTrigger>
-              <TabsTrigger value="signup">{t("login.tab.signUp")}</TabsTrigger>
-            </TabsList>
-            <TabsContent value="signin" className="mt-2 text-xs text-muted-foreground">
-              {t("login.hint.signIn")}
-            </TabsContent>
-            <TabsContent value="signup" className="mt-2 text-xs text-muted-foreground">
-              {t("login.hint.signUp")}
-            </TabsContent>
-          </Tabs>
+          <p className="text-xs text-muted-foreground">{t("login.hint.signIn")}</p>
 
           <form onSubmit={onSubmit} className="mt-6 space-y-4">
             <div className="space-y-1.5">
@@ -72,10 +57,10 @@ function LoginPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="password">{t("login.password")}</Label>
-              <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "signin" ? "current-password" : "new-password"} />
+              <Input id="password" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
             </div>
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? t("login.wait") : mode === "signin" ? t("login.submit.signIn") : t("login.submit.signUp")}
+              {busy ? t("login.wait") : t("login.submit.signIn")}
             </Button>
           </form>
         </div>
