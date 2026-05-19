@@ -68,6 +68,50 @@ export type Database = {
         }
         Relationships: []
       }
+      loans: {
+        Row: {
+          book_id: string
+          borrowed_at: string
+          borrowed_by: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          returned_at: string | null
+          returned_by: string | null
+          student_number: string | null
+        }
+        Insert: {
+          book_id: string
+          borrowed_at?: string
+          borrowed_by?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
+          student_number?: string | null
+        }
+        Update: {
+          book_id?: string
+          borrowed_at?: string
+          borrowed_by?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          returned_at?: string | null
+          returned_by?: string | null
+          student_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_book_id_fkey"
+            columns: ["book_id"]
+            isOneToOne: false
+            referencedRelation: "books"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -95,7 +139,12 @@ export type Database = {
     }
     Functions: {
       borrow_book: {
-        Args: { _book_id: string }
+        Args: {
+          _book_id: string
+          _first_name?: string | null
+          _last_name?: string | null
+          _student_number?: string | null
+        }
         Returns: {
           archived: boolean
           author: string
@@ -128,7 +177,12 @@ export type Database = {
         Returns: boolean
       }
       return_book: {
-        Args: { _book_id: string }
+        Args: {
+          _book_id: string
+          _first_name?: string | null
+          _last_name?: string | null
+          _student_number?: string | null
+        }
         Returns: {
           archived: boolean
           author: string

@@ -36,6 +36,13 @@ type FormState = {
   cover_url: string;
 };
 
+type LoanCall = {
+  bookId: string;
+  studentNumber: string;
+  firstName: string;
+  lastName: string;
+};
+
 const empty: FormState = { title: "", author: "", isbn: "", category: "", total_copies: 1, description: "", cover_url: "" };
 
 type TFn = (key: string, vars?: Record<string, string | number>) => string;
@@ -79,16 +86,26 @@ export function AdminConsole() {
   };
 
   const borrow = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.rpc("borrow_book", { _book_id: id });
+    mutationFn: async (vars: LoanCall) => {
+      const { error } = await supabase.rpc("borrow_book", {
+        _book_id: vars.bookId,
+        _student_number: vars.studentNumber || null,
+        _first_name: vars.firstName || null,
+        _last_name: vars.lastName || null,
+      });
       if (error) throw error;
     },
     onSuccess: () => { toast.success(t("admin.toast.borrow")); refresh(); setBorrowFor(null); },
     onError: (e: Error) => toast.error(humanError(e.message, t)),
   });
   const ret = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.rpc("return_book", { _book_id: id });
+    mutationFn: async (vars: LoanCall) => {
+      const { error } = await supabase.rpc("return_book", {
+        _book_id: vars.bookId,
+        _student_number: vars.studentNumber || null,
+        _first_name: vars.firstName || null,
+        _last_name: vars.lastName || null,
+      });
       if (error) throw error;
     },
     onSuccess: () => { toast.success(t("admin.toast.return")); refresh(); setReturnFor(null); },
@@ -267,14 +284,18 @@ export function AdminConsole() {
         mode="borrow"
         pending={borrow.isPending}
         onCancel={() => setBorrowFor(null)}
-        onConfirm={() => borrowFor && borrow.mutate(borrowFor.id)}
+        onConfirm={(info) =>
+          borrowFor && borrow.mutate({ bookId: borrowFor.id, ...info })
+        }
       />
       <BorrowReturnDialog
         book={returnFor}
         mode="return"
         pending={ret.isPending}
         onCancel={() => setReturnFor(null)}
-        onConfirm={() => returnFor && ret.mutate(returnFor.id)}
+        onConfirm={(info) =>
+          returnFor && ret.mutate({ bookId: returnFor.id, ...info })
+        }
       />
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
@@ -380,7 +401,7 @@ function BorrowReturnDialog({
   mode: "borrow" | "return";
   pending: boolean;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (info: { studentNumber: string; firstName: string; lastName: string }) => void;
 }) {
   const t = useT();
   const [studentNumber, setStudentNumber] = useState("");
@@ -450,7 +471,16 @@ function BorrowReturnDialog({
           <Button variant="outline" onClick={onCancel} disabled={pending}>
             {t("admin.delete.cancel")}
           </Button>
-          <Button onClick={onConfirm} disabled={pending}>
+          <Button
+            onClick={() =>
+              onConfirm({
+                studentNumber: studentNumber.trim(),
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+              })
+            }
+            disabled={pending}
+          >
             {pending
               ? t("form.saving")
               : t(mode === "borrow" ? "admin.loan.borrow.confirm" : "admin.loan.return.confirm")}
