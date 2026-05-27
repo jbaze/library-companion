@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { BookOpenText, Globe, LogIn, LogOut, ShieldCheck } from "lucide-react";
+import { Globe, LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useI18n, type Lang } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6">
         <Link to="/" className="flex items-center gap-2 group">
-          <span className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground shadow-book">
-            <BookOpenText className="h-5 w-5" />
-          </span>
+          <img src="/logo.png" alt="" className="h-9 w-9 object-contain" />
           <span className="font-display text-xl font-semibold tracking-tight">
             {t("site.brand")}
           </span>
